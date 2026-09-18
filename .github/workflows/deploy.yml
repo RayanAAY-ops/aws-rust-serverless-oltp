@@ -41,7 +41,18 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all-targets -- -D warnings
 
+      # Both cargo-lambda and Zig are cached in a fixed directory we control
+      # and add to PATH ourselves, keyed on the pinned version below, so most
+      # runs skip re-downloading them entirely.
+      - name: Cache cargo-lambda
+        id: cargo-lambda-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo-lambda-bin
+          key: cargo-lambda-v1.6.1-${{ runner.os }}
+
       - name: Install cargo-lambda
+        if: steps.cargo-lambda-cache.outputs.cache-hit != 'true'
         uses: jaxxstorm/action-install-gh-release@v1.12.0
         with:
           repo: cargo-lambda/cargo-lambda
@@ -49,11 +60,23 @@ jobs:
           extension-matching: disable
           rename-to: cargo-lambda
           chmod: 0755
+          cache: false
+          target: ~/.cargo-lambda-bin
+
+      - name: Add cargo-lambda to PATH
+        run: echo "$HOME/.cargo-lambda-bin" >> "$GITHUB_PATH"
 
       # cargo-lambda cross-compiles to aarch64-unknown-linux-musl using Zig as
       # the linker; the ubuntu-latest runner doesn't have it preinstalled.
+      - name: Cache Zig
+        id: zig-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ziglang-0.13.0-${{ runner.os }}
+
       - name: Install Zig
-        run: pip3 install ziglang
+        run: pip3 install ziglang==0.13.0
 
       - name: Build & package bootstrap.zip
         run: terraform/lambda-zipper/build.sh bootstrap.zip
@@ -107,14 +130,13 @@ jobs:
         working-directory: terraform
         run: terraform init -backend-config="backend/dev.tfbackend"
 
+      - name: Terraform validate
+        working-directory: terraform
+        run: terraform validate
+
       - name: Terraform plan
         working-directory: terraform
         run: |
           terraform plan \
             -var-file="tfvars/dev.tfvars" \
-            -var="artifact_key=${ARTIFACT_KEY}" \
-            -out=tfplan
-
-      - name: Terraform apply
-        working-directory: terraform
-        run: terraform apply -auto-approve tfplan
+            -var="artifact_key=${ARTIFACT_KEY}"
