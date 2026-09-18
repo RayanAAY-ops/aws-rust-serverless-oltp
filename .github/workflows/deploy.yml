@@ -44,19 +44,23 @@ jobs:
       # Both cargo-lambda and Zig are cached in a fixed directory we control
       # and add to PATH ourselves, keyed on the pinned version below, so most
       # runs skip re-downloading them entirely.
+      # v1.6.1 bundles an old cargo-zigbuild (0.19.4) that can't strip the
+      # --fix-cortex-a53-843419 linker flag rustc adds for aarch64 targets,
+      # causing "unsupported linker arg" on both -gnu and -musl. 1.9.2 bundles
+      # a newer cargo-zigbuild that handles this correctly (verified locally).
       - name: Cache cargo-lambda
         id: cargo-lambda-cache
         uses: actions/cache@v4
         with:
           path: ~/.cargo-lambda-bin
-          key: cargo-lambda-v1.6.1-${{ runner.os }}
+          key: cargo-lambda-v1.9.2-${{ runner.os }}
 
       - name: Install cargo-lambda
         if: steps.cargo-lambda-cache.outputs.cache-hit != 'true'
         uses: jaxxstorm/action-install-gh-release@v1.12.0
         with:
           repo: cargo-lambda/cargo-lambda
-          tag: v1.6.1
+          tag: v1.9.2
           extension-matching: disable
           rename-to: cargo-lambda
           chmod: 0755
