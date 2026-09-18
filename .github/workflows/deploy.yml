@@ -93,9 +93,9 @@ jobs:
       - name: Upload artifact to S3
         working-directory: terraform
         run: |
-          ARTIFACT_BUCKET=$(grep '^artifact_bucket' "tfvars/${ENV}.tfvars" | cut -d'"' -f2)
+          ARTIFACT_BUCKET="aws-rust-serverless-oltp-lambda-artifacts"
           echo "ARTIFACT_BUCKET=$ARTIFACT_BUCKET" >> "$GITHUB_ENV"
-          echo "ARTIFACT_KEY=${ENV}/${GITHUB_SHA}/bootstrap.zip" >> "$GITHUB_ENV"
+          echo "ARTIFACT_KEY=dev/${GITHUB_SHA}/bootstrap.zip" >> "$GITHUB_ENV"
           aws s3 cp ../bootstrap.zip "s3://${ARTIFACT_BUCKET}/${ENV}/${GITHUB_SHA}/bootstrap.zip"
 
       - name: Setup Terraform
@@ -105,13 +105,13 @@ jobs:
 
       - name: Terraform init
         working-directory: terraform
-        run: terraform init -backend-config="backend/${ENV}.tfbackend"
+        run: terraform init -backend-config="backend/dev.tfbackend"
 
       - name: Terraform plan
         working-directory: terraform
         run: |
           terraform plan \
-            -var-file="tfvars/${ENV}.tfvars" \
+            -var-file="tfvars/dev.tfvars" \
             -var="artifact_key=${ARTIFACT_KEY}" \
             -out=tfplan
 
