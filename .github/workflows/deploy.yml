@@ -1,0 +1,115 @@
+name: Build & Deploy Lambda
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, uat, prod]
+
+env:
+  TF_VERSION: "1.9.5"
+
+jobs:
+  # Always build + test on every push/PR, regardless of deploy target.
+  build:
+    name: Build Rust Lambda binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-musl
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo test
+        run: cargo test --workspace
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Install cargo-lambda
+        uses: jaxxstorm/action-install-gh-release@v1.12.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          tag: v1.6.1
+          extension-matching: disable
+          rename-to: cargo-lambda
+          chmod: 0755
+
+      - name: Build & package bootstrap.zip
+        run: terraform/lambda-zipper/build.sh bootstrap.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-zip
+          path: bootstrap.zip
+          retention-days: 7
+
+  # Deploys dev automatically on main, or whichever environment is chosen
+  # manually via workflow_dispatch. uat/prod are intended to be run manually
+  # (or gate them behind GitHub Environments with required reviewers).
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'dev' }}
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    env:
+      ENV: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bootstrap-zip
+          path: .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Upload artifact to S3
+        working-directory: terraform
+        run: |
+          ARTIFACT_BUCKET=$(grep '^artifact_bucket' "tfvars/${ENV}.tfvars" | cut -d'"' -f2)
+          echo "ARTIFACT_BUCKET=$ARTIFACT_BUCKET" >> "$GITHUB_ENV"
+          echo "ARTIFACT_KEY=${ENV}/${GITHUB_SHA}/bootstrap.zip" >> "$GITHUB_ENV"
+          aws s3 cp ../bootstrap.zip "s3://${ARTIFACT_BUCKET}/${ENV}/${GITHUB_SHA}/bootstrap.zip"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -backend-config="backend/${ENV}.tfbackend"
+
+      - name: Terraform plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var-file="tfvars/${ENV}.tfvars" \
+            -var="artifact_key=${ARTIFACT_KEY}" \
+            -out=tfplan
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan

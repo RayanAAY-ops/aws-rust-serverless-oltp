@@ -1,0 +1,9 @@
+# Backend config for the `dev` environment.
+# Usage: terraform init -backend-config=backend/dev.tfbackend
+#
+# CHANGE_ME: replace with your real state bucket / lock table before first run.
+bucket         = "CHANGE_ME-tfstate"
+key            = "aws-rust-serverless-oltp/dev/terraform.tfstate"
+region         = "eu-west-1"
+dynamodb_table = "CHANGE_ME-terraform-locks"
+encrypt        = true

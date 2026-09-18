@@ -1,0 +1,10 @@
+/target
+bootstrap.zip
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfplan
+terraform/tfplan
+*.tfstate
+*.tfstate.*
