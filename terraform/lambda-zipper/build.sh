@@ -32,7 +32,12 @@ if ! command -v cargo-lambda >/dev/null 2>&1; then
 fi
 
 echo "Building release binary for aarch64 (arm64) via cargo-lambda..."
-cargo lambda build --release --arm64
+# Explicit musl target rather than --arm64: cargo-lambda's --arm64 shorthand
+# maps to aarch64-unknown-linux-gnu.2.26, whose target spec passes
+# --fix-cortex-a53-843419 to the linker. Zig's bundled lld doesn't support
+# that flag and the build fails. musl's target spec has no such flag, and
+# static musl binaries run fine on Lambda's provided.al2023 (arm64).
+cargo lambda build --release --target aarch64-unknown-linux-musl
 
 # cargo lambda build places the packaged bootstrap binary here:
 BUILD_DIR="target/lambda/aws-rust-serverless-oltp"
