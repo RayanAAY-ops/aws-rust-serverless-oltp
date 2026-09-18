@@ -12,8 +12,8 @@ resource "aws_dynamodb_table" "shop_items" {
 }
 
 # --- Lambda function: zip package on provided.al2023 (custom Rust runtime) ---
-# Module creates the exec role, basic-execution policy attachment and log
-# group for us; we only need to attach the extra DynamoDB permission below.
+# IAM role is defined ourselves in role.tf and passed in below, instead of
+# letting the module create one; the module still manages the log group.
 
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
@@ -44,16 +44,12 @@ module "lambda" {
     DYNAMODB_TABLE_NAME = aws_dynamodb_table.shop_items.name
   }
 
-  attach_policy_json = true
-  policy_json        = data.aws_iam_policy_document.lambda_dynamodb.json
-}
+  # Use the role defined in role.tf instead of having the module create one.
+  create_role = false
+  lambda_role = aws_iam_role.lambda_exec.arn
 
-# Least-privilege access to just the table this function writes to.
-data "aws_iam_policy_document" "lambda_dynamodb" {
-  statement {
-    actions = [
-      "dynamodb:PutItem",
-    ]
-    resources = [aws_dynamodb_table.shop_items.arn]
-  }
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy.lambda_dynamodb,
+  ]
 }
