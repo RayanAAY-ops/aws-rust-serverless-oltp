@@ -50,6 +50,11 @@ jobs:
           rename-to: cargo-lambda
           chmod: 0755
 
+      # cargo-lambda cross-compiles to aarch64-unknown-linux-musl using Zig as
+      # the linker; the ubuntu-latest runner doesn't have it preinstalled.
+      - name: Install Zig
+        run: pip3 install ziglang
+
       - name: Build & package bootstrap.zip
         run: terraform/lambda-zipper/build.sh bootstrap.zip
 

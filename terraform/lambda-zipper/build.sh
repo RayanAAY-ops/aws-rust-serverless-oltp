@@ -11,7 +11,18 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUTPUT_ZIP="${1:-$REPO_ROOT/bootstrap.zip}"
+
+# Resolve to an absolute path up front: a relative $1 must stay relative to
+# the caller's cwd, not to $REPO_ROOT or $BUILD_DIR (both of which we cd into
+# below) — otherwise the zip silently lands somewhere the caller never asked for.
+if [ -n "${1:-}" ]; then
+  case "$1" in
+    /*) OUTPUT_ZIP="$1" ;;
+    *) OUTPUT_ZIP="$(pwd)/$1" ;;
+  esac
+else
+  OUTPUT_ZIP="$REPO_ROOT/bootstrap.zip"
+fi
 
 cd "$REPO_ROOT"
 
