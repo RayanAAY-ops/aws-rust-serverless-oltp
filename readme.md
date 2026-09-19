@@ -26,7 +26,6 @@ aws s3 cp bootstrap.zip s3://aws-rust-serverless-oltp-lambda-artifacts/dev/8250f
 
 ./terraform/lambda-zipper/build.sh 
 
-## Line-by-line
 
 **Lines 1–3**
 ```rust

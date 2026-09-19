@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)] // Debug and PartialEq for testing, Deserialize for JSON deserialization
 pub struct MyEvent {
     pub item_name: String,
     pub price: f32,

@@ -15,3 +15,12 @@ fn deserializes_valid_event() {
         }
     );
 }
+
+#[test]
+fn rejects_a_string_price() {
+    let raw = json!({"item_name": "Widget", "price": "not-a-number"});
+
+    let result: Result<MyEvent, _> = serde_json::from_value(raw);
+
+    assert!(result.is_err());
+}
