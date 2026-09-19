@@ -76,7 +76,7 @@ jobs:
         run: pip3 install ziglang==0.13.0
 
       - name: Build & package bootstrap.zip
-        run: build.sh bootstrap.zip
+        run: ./build.sh bootstrap.zip
 
       - uses: actions/upload-artifact@v4
         with:
