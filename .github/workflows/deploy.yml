@@ -81,7 +81,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: bootstrap-zip
-          path: bootstrap.zip
+          path: target/lambda/aws-rust-serverless-oltp/bootstrap.zip
           retention-days: 7
 
   # Deploys dev automatically on main, or whichever environment is chosen
