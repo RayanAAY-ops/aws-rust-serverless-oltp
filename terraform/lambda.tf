@@ -42,6 +42,7 @@ module "lambda" {
   environment_variables = {
     RUST_LOG            = "info"
     DYNAMODB_TABLE_NAME = aws_dynamodb_table.shop_items.name
+    REGION              = var.aws_region
   }
 
   # Use the role defined in role.tf instead of having the module create one.
