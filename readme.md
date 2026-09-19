@@ -1,3 +1,5 @@
+<img width="964" height="494" alt="Screenshot 2026-09-19 at 20 40 29" src="https://github.com/user-attachments/assets/62a496fe-41bf-4f25-8d20-beb94576f25f" />
+
 # 1. Terraform state bucket (dev)
 aws s3api create-bucket \
   --bucket rust-serverless-oltp-tfstate-dev \
